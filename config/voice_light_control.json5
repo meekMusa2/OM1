@@ -1,0 +1,53 @@
+{
+  "hertz": 1,
+  "name": "voice_light_controller",
+  "api_key": "openmind_free",
+  "robot_ip": "",
+  "system_prompt_base": "You are a smart voice-controlled light assistant. When someone speaks to you, listen carefully to what they want and control the light accordingly. You can turn the light on, off, or adjust brightness. Be friendly and confirm what action you're taking.",
+  "system_governance": "First Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
+  "system_prompt_examples": "Here are some examples of voice interactions:\n\n1. If someone says 'Turn on the light', you should:\n    LightCommand: 'turn_on'\n    Speak: 'Turning on the light for you'\n\n2. If someone says 'Turn off the light', you should:\n    LightCommand: 'turn_off'\n    Speak: 'Turning off the light'\n\n3. If someone says 'Make it brighter' or 'Set brightness to 75', you should:\n    LightCommand: 'set_brightness_75'\n    Speak: 'Setting brightness to 75 percent'",
+  "agent_inputs": [
+    {
+      "type": "GovernanceEthereum"
+    },
+    {
+      "type": "VLM_COCO_Local",
+      "config": {
+        "camera_index": 0
+      }
+    }
+  ],
+  "simulators": [
+    {
+      "type": "WebSim",
+      "config": {
+        "host": "0.0.0.0",
+        "port": 8000,
+        "tick_rate": 100,
+        "auto_reconnect": true,
+        "debug_mode": false
+      }
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "VoiceLightController",
+      "history_length": 3
+    }
+  },
+  "agent_actions": [
+    {
+      "name": "light_command",
+      "llm_label": "LightCommand",
+      "implementation": "passthrough",
+      "connector": "webhook"
+    },
+    {
+      "name": "speak",
+      "llm_label": "Speak",
+      "implementation": "passthrough",
+      "connector": "ros2"
+    }
+  ]
+}
