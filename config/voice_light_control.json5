@@ -11,7 +11,10 @@
       "type": "GovernanceEthereum"
     },
     {
-      "type": "GoogleASRInput"
+      "type": "VLM_COCO_Local",
+      "config": {
+        "camera_index": 0
+      }
     }
   ],
   "simulators": [
