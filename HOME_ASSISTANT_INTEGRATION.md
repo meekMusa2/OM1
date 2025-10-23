@@ -172,7 +172,7 @@ Contributions welcome! Please open an issue or PR.
 
 ## Demo
 
-[Link to demo video will be added]
+https://youtu.be/iEmILoJUjzk
 
 ## Credits
 
