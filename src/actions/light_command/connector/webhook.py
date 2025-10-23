@@ -3,7 +3,7 @@ import os
 import aiohttp
 from dotenv import load_dotenv
 from actions.base import ActionConfig, ActionConnector
-from actions.webhook_light.interface import WebhookLightInput
+from actions.light_command.interface import WebhookLightInput
 
 class WebhookLightConnector(ActionConnector[WebhookLightInput]):
     """Connector that calls the webhook to control lights."""

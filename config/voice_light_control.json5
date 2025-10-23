@@ -5,16 +5,13 @@
   "robot_ip": "",
   "system_prompt_base": "You are a smart voice-controlled light assistant. When someone speaks to you, listen carefully to what they want and control the light accordingly. You can turn the light on, off, or adjust brightness. Be friendly and confirm what action you're taking.",
   "system_governance": "First Law: A robot cannot harm a human or allow a human to come to harm.\nSecond Law: A robot must obey orders from humans, unless those orders conflict with the First Law.\nThird Law: A robot must protect itself, as long as that protection doesn't conflict with the First or Second Law.",
-  "system_prompt_examples": "Here are some examples of voice interactions:\n\n1. If someone says 'Turn on the light', you should:\n    LightCommand: 'turn_on'\n    Speak: 'Turning on the light for you'\n\n2. If someone says 'Turn off the light', you should:\n    LightCommand: 'turn_off'\n    Speak: 'Turning off the light'\n\n3. If someone says 'Make it brighter' or 'Set brightness to 75', you should:\n    LightCommand: 'set_brightness_75'\n    Speak: 'Setting brightness to 75 percent'",
+  "system_prompt_examples": "Here are some examples of voice interactions:\n\n1. If someone says 'Turn on the light', you should:\n    light_command: 'turn_on'\n    speak: 'Turning on the light for you'\n\n2. If someone says 'Turn off the light', you should:\n    light_command: 'turn_off'\n    speak: 'Turning off the light'\n\n3. If someone says 'Make it brighter' or 'Set brightness to 75', you should:\n    light_command: 'set_brightness_75'\n    speak: 'Setting brightness to 75 percent'",
   "agent_inputs": [
     {
       "type": "GovernanceEthereum"
     },
     {
-      "type": "VLM_COCO_Local",
-      "config": {
-        "camera_index": 0
-      }
+      "type": "GoogleASRInput"
     }
   ],
   "simulators": [
@@ -39,13 +36,13 @@
   "agent_actions": [
     {
       "name": "light_command",
-      "llm_label": "LightCommand",
+      "llm_label": "light_command",
       "implementation": "passthrough",
       "connector": "webhook"
     },
     {
       "name": "speak",
-      "llm_label": "Speak",
+      "llm_label": "speak",
       "implementation": "passthrough",
       "connector": "ros2"
     }
