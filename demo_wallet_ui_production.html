@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OM1 Multi-Wallet Demo - Bounty #358</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .wallet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .wallet-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .wallet-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .wallet-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .wallet-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .ethereum .wallet-icon {
+            background: linear-gradient(135deg, #627EEA, #8A9FFF);
+        }
+
+        .solana .wallet-icon {
+            background: linear-gradient(135deg, #14F195, #9945FF);
+        }
+
+        .wallet-title h3 {
+            font-size: 1.5em;
+            color: #333;
+        }
+
+        .wallet-title p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .wallet-info {
+            margin: 20px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #dee2e6;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e9ecef;
+        }
+
+        .network-selector {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .network-selector label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .network-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+        }
+
+        .network-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .log-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .log-header {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .log-content {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+
+        .log-entry.success {
+            color: #4caf50;
+        }
+
+        .log-entry.error {
+            color: #f44336;
+        }
+
+        .log-entry.info {
+            color: #2196F3;
+        }
+
+        .log-entry a {
+            color: #64b5f6;
+            text-decoration: none;
+        }
+
+        .log-entry a:hover {
+            text-decoration: underline;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .wallet-option {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-option:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateX(5px);
+        }
+
+        .wallet-option-info h4 {
+            margin: 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .wallet-option-info p {
+            margin: 5px 0 0 0;
+            color: #666;
+            font-size: 0.85em;
+        }
+
+        .feature-badge {
+            display: inline-block;
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> OM1 Multi-Wallet </h1>
+            <p>Complete Multi-Chain Wallet Integration</p>
+        </div>
+
+        <div class="wallet-grid">
+            <!-- EVM Wallets -->
+            <div class="wallet-card ethereum">
+                <div class="wallet-header">
+                    <div class="wallet-icon">🔷</div>
+                    <div class="wallet-title">
+                        <h3>EVM Wallet</h3>
+                        <p>MetaMask, Rabby, Trust, Rainbow, Coinbase, etc.</p>
+                    </div>
+                </div>
+
+                <div class="wallet-info">
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="status disconnected" id="evm-status">Not Connected</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Provider:</span>
+                        <span class="info-value" id="evm-provider">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Balance:</span>
+                        <span class="info-value" id="evm-balance">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value" id="evm-address" style="font-size: 0.75em;">Not connected</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Network:</span>
+                        <span class="info-value" id="evm-current-network">--</span>
+                    </div>
+                </div>
+
+                <div class="network-selector" id="evm-network-section" style="display:none;">
+                    <label>Switch Network:</label>
+                    <select id="evm-network" onchange="switchEvmNetwork()">
+                        <option value="0x1">Ethereum Mainnet</option>
+                        <option value="0xaa36a7" selected>Sepolia Testnet</option>
+                        <option value="0x89">Polygon</option>
+                        <option value="0x38">BSC</option>
+                        <option value="0xa4b1">Arbitrum</option>
+                        <option value="0xa">Optimism</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="evm-connect" onclick="showWalletSelector()">
+                        Select Wallet
+                    </button>
+                    <button class="btn btn-danger" id="evm-disconnect" onclick="disconnectEvm()" style="display:none;">
+                        Disconnect
+                    </button>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-secondary" id="evm-sign" onclick="signEvmMessage()" disabled>
+                        Sign Message
+                    </button>
+                    <button class="btn btn-secondary" id="evm-transfer" onclick="showTransferModal('evm')" disabled>
+                        Send
+                    </button>
+                </div>
+            </div>
+
+            <!-- Solana Wallet -->
+            <div class="wallet-card solana">
+                <div class="wallet-header">
+                    <div class="wallet-icon">🟣</div>
+                    <div class="wallet-title">
+                        <h3>Solana</h3>
+                        <p>Phantom / Solflare</p>
+                    </div>
+                </div>
+
+                <div class="wallet-info">
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="status disconnected" id="sol-status">Not Connected</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Balance:</span>
+                        <span class="info-value" id="sol-balance">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value" id="sol-address" style="font-size: 0.75em;">Not connected</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Network:</span>
+                        <span class="info-value" id="sol-current-network">--</span>
+                    </div>
+                </div>
+
+                <div class="network-selector" id="sol-network-section" style="display:none;">
+                    <label>Switch Network:</label>
+                    <select id="sol-network" onchange="switchSolanaNetwork()">
+                        <option value="mainnet-beta">Mainnet Beta</option>
+                        <option value="devnet" selected>Devnet</option>
+                        <option value="testnet">Testnet</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" id="sol-connect" onclick="connectSolana()">
+                        Connect Wallet
+                    </button>
+                    <button class="btn btn-danger" id="sol-disconnect" onclick="disconnectSolana()" style="display:none;">
+                        Disconnect
+                    </button>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-secondary" id="sol-sign" onclick="signSolMessage()" disabled>
+                        Sign Message
+                    </button>
+                    <button class="btn btn-secondary" id="sol-transfer" onclick="showTransferModal('solana')" disabled>
+                        Send SOL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="log-container">
+            <div class="log-header">📋 Activity Log</div>
+            <div class="log-content" id="log">
+            </div>
+        </div>
+    </div>
+
+    <!-- Wallet Selector Modal -->
+    <div class="modal" id="walletSelectorModal">
+        <div class="modal-content">
+            <div class="modal-header">Choose Your Wallet</div>
+            <div id="wallet-options"></div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="closeWalletSelector()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div class="modal" id="transferModal">
+        <div class="modal-content">
+            <div class="modal-header" id="transfer-title">Send Transaction</div>
+            <form id="transferForm" onsubmit="submitTransfer(event)">
+                <div class="form-group">
+                    <label>Current Network: <span id="transfer-network-display" style="color: #667eea; font-weight: 600;">--</span></label>
+                </div>
+                <div class="form-group">
+                    <label>Recipient Address:</label>
+                    <input type="text" id="recipient" placeholder="0x... or Solana address" required>
+                </div>
+                <div class="form-group">
+                    <label>Amount:</label>
+                    <input type="number" id="amount" step="0.000001" placeholder="0.001" required>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+    <script>
+        let evmAccount;
+        let evmProvider;
+        let evmChainId;
+        let solanaWallet;
+        let solanaConnection;
+        let currentWallet = '';
+        let currentSolanaNetwork = 'devnet';
+
+        const NETWORK_NAMES = {
+            '0x1': 'Ethereum Mainnet',
+            '0xaa36a7': 'Sepolia Testnet',
+            '0x89': 'Polygon',
+            '0x38': 'BSC',
+            '0xa4b1': 'Arbitrum',
+            '0xa': 'Optimism',
+        };
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            const htmlMessage = message.replace(urlRegex, '<a href="$1" target="_blank">$1</a>');
+
+            entry.innerHTML = `[${timestamp}] ${htmlMessage}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        window.addEventListener('load', async () => {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            detectWallets();
+        });
+
+        function detectWallets() {
+            const detected = [];
+
+            if (typeof window.ethereum !== 'undefined') {
+                if (window.ethereum.providers) {
+                    window.ethereum.providers.forEach(provider => {
+                        if (provider.isMetaMask) detected.push('MetaMask');
+                        if (provider.isRabby) detected.push('Rabby');
+                        if (provider.isTrust) detected.push('Trust Wallet');
+                        if (provider.isCoinbaseWallet) detected.push('Coinbase Wallet');
+                    });
+                } else {
+                    if (window.ethereum.isMetaMask) detected.push('MetaMask');
+                    if (window.ethereum.isRabby) detected.push('Rabby');
+                    if (window.ethereum.isTrust) detected.push('Trust Wallet');
+                    if (window.ethereum.isCoinbaseWallet) detected.push('Coinbase Wallet');
+                }
+
+                if (window.rabby) detected.push('Rabby');
+
+                if (detected.length > 0) {
+                    log(`✅ EVM wallets detected: ${detected.join(', ')}`, 'success');
+                } else {
+                    log('✅ Generic EVM wallet detected', 'success');
+                }
+            } else {
+                log('⚠️  No EVM wallet detected. Install MetaMask or Rabby', 'error');
+            }
+
+            if (typeof window.solana !== 'undefined') {
+                const solProvider = window.solana.isPhantom ? 'Phantom' : 'Solana';
+                log(`✅ ${solProvider} wallet detected!`, 'success');
+            } else {
+                log('⚠️  No Solana wallet detected. Install Phantom', 'error');
+            }
+        }
+
+        function showWalletSelector() {
+            const optionsDiv = document.getElementById('wallet-options');
+            optionsDiv.innerHTML = '';
+
+            const availableWallets = [];
+
+            if (typeof window.ethereum !== 'undefined') {
+                if (window.ethereum.providers) {
+                    window.ethereum.providers.forEach(provider => {
+                        if (provider.isMetaMask) availableWallets.push({ id: 'metamask', name: 'MetaMask', provider });
+                        if (provider.isRabby) availableWallets.push({ id: 'rabby', name: 'Rabby', provider });
+                        if (provider.isTrust) availableWallets.push({ id: 'trust', name: 'Trust Wallet', provider });
+                        if (provider.isCoinbaseWallet) availableWallets.push({ id: 'coinbase', name: 'Coinbase Wallet', provider });
+                    });
+                } else {
+                    if (window.ethereum.isMetaMask) availableWallets.push({ id: 'metamask', name: 'MetaMask', provider: window.ethereum });
+                    if (window.ethereum.isRabby) availableWallets.push({ id: 'rabby', name: 'Rabby', provider: window.ethereum });
+                    if (window.ethereum.isTrust) availableWallets.push({ id: 'trust', name: 'Trust Wallet', provider: window.ethereum });
+                    if (window.ethereum.isCoinbaseWallet) availableWallets.push({ id: 'coinbase', name: 'Coinbase Wallet', provider: window.ethereum });
+                }
+
+                if (window.rabby && !availableWallets.find(w => w.id === 'rabby')) {
+                    availableWallets.push({ id: 'rabby', name: 'Rabby', provider: window.rabby });
+                }
+
+                if (availableWallets.length === 0) {
+                    availableWallets.push({ id: 'generic', name: 'Browser Wallet', provider: window.ethereum });
+                }
+            }
+
+            if (availableWallets.length === 0) {
+                optionsDiv.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No EVM wallets detected. Please install MetaMask or Rabby.</p>';
+            } else {
+                availableWallets.forEach(wallet => {
+                    const option = document.createElement('div');
+                    option.className = 'wallet-option';
+                    option.onclick = () => connectSpecificWallet(wallet.id, wallet.provider);
+
+                    const emoji = wallet.id === 'rabby' ? '🐰' :
+                                  wallet.id === 'trust' ? '🛡️' :
+                                  wallet.id === 'coinbase' ? '🔵' : '🦊';
+
+                    option.innerHTML = `
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 24px;">
+                            ${emoji}
+                        </div>
+                        <div class="wallet-option-info">
+                            <h4>${wallet.name}</h4>
+                            <p>Browser extension</p>
+                        </div>
+                    `;
+
+                    optionsDiv.appendChild(option);
+                });
+            }
+
+            document.getElementById('walletSelectorModal').classList.add('active');
+            log('👛 Opening wallet selector...', 'info');
+        }
+
+        function closeWalletSelector() {
+            document.getElementById('walletSelectorModal').classList.remove('active');
+        }
+
+        async function connectSpecificWallet(walletType, provider) {
+            closeWalletSelector();
+
+            if (!provider) {
+                log(`❌ ${walletType} provider not found!`, 'error');
+                return;
+            }
+
+            try {
+                const walletName = walletType.charAt(0).toUpperCase() + walletType.slice(1);
+                log(`📡 Connecting to ${walletName}...`, 'info');
+
+                const accounts = await provider.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                evmAccount = accounts[0];
+                evmProvider = provider;
+
+                const chainId = await provider.request({ method: 'eth_chainId' });
+                evmChainId = chainId;
+                const network = NETWORK_NAMES[chainId] || `Chain ${parseInt(chainId, 16)}`;
+
+                const balanceWei = await provider.request({
+                    method: 'eth_getBalance',
+                    params: [evmAccount, 'latest']
+                });
+                const balanceEth = parseInt(balanceWei, 16) / 1e18;
+
+                document.getElementById('evm-status').textContent = 'Connected';
+                document.getElementById('evm-status').className = 'status connected';
+                document.getElementById('evm-provider').textContent = walletName;
+                document.getElementById('evm-balance').textContent = `${balanceEth.toFixed(4)} ETH`;
+                document.getElementById('evm-address').textContent = `${evmAccount.substring(0, 6)}...${evmAccount.substring(38)}`;
+                document.getElementById('evm-current-network').textContent = network;
+
+                document.getElementById('evm-network-section').style.display = 'block';
+                document.getElementById('evm-network').value = chainId;
+
+                document.getElementById('evm-sign').disabled = false;
+                document.getElementById('evm-transfer').disabled = false;
+                document.getElementById('evm-connect').style.display = 'none';
+                document.getElementById('evm-disconnect').style.display = 'block';
+
+                log(`✅ ${walletName} connected!`, 'success');
+                log(`   Address: ${evmAccount}`, 'info');
+                log(`   Network: ${network}`, 'info');
+                log(`   Balance: ${balanceEth.toFixed(4)} ETH`, 'info');
+
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function switchEvmNetwork() {
+            const chainId = document.getElementById('evm-network').value;
+
+            try {
+                log(`🔄 Switching to ${NETWORK_NAMES[chainId]}...`, 'info');
+
+                await evmProvider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: chainId }],
+                });
+
+                evmChainId = chainId;
+                document.getElementById('evm-current-network').textContent = NETWORK_NAMES[chainId];
+
+                log(`✅ Switched to ${NETWORK_NAMES[chainId]}`, 'success');
+
+                const balanceWei = await evmProvider.request({
+                    method: 'eth_getBalance',
+                    params: [evmAccount, 'latest']
+                });
+                const balanceEth = parseInt(balanceWei, 16) / 1e18;
+                document.getElementById('evm-balance').textContent = `${balanceEth.toFixed(4)} ETH`;
+
+            } catch (error) {
+                if (error.code === 4902) {
+                    log('⚠️  Network not added to wallet', 'error');
+                } else {
+                    log(`❌ Network switch failed: ${error.message}`, 'error');
+                }
+                document.getElementById('evm-network').value = evmChainId;
+            }
+        }
+
+        function disconnectEvm() {
+            evmAccount = null;
+            evmProvider = null;
+            evmChainId = null;
+            document.getElementById('evm-status').textContent = 'Not Connected';
+            document.getElementById('evm-status').className = 'status disconnected';
+            document.getElementById('evm-provider').textContent = '--';
+            document.getElementById('evm-balance').textContent = '--';
+            document.getElementById('evm-address').textContent = 'Not connected';
+            document.getElementById('evm-current-network').textContent = '--';
+            document.getElementById('evm-network-section').style.display = 'none';
+            document.getElementById('evm-sign').disabled = true;
+            document.getElementById('evm-transfer').disabled = true;
+            document.getElementById('evm-connect').style.display = 'block';
+            document.getElementById('evm-disconnect').style.display = 'none';
+            log('🔌 EVM wallet disconnected', 'info');
+        }
+
+        async function connectSolana() {
+            if (typeof window.solana === 'undefined') {
+                log('❌ Phantom wallet not found!', 'error');
+                return;
+            }
+
+            try {
+                log('📡 Requesting Phantom connection...', 'info');
+
+                const response = await window.solana.connect();
+                solanaWallet = response.publicKey.toString();
+
+                solanaConnection = new solanaWeb3.Connection(
+                    solanaWeb3.clusterApiUrl(currentSolanaNetwork),
+                    'confirmed'
+                );
+                const publicKey = new solanaWeb3.PublicKey(solanaWallet);
+const balance = await solanaConnection.getBalance(publicKey);
+                const balanceSol = balance / solanaWeb3.LAMPORTS_PER_SOL;
+
+                document.getElementById('sol-status').textContent = 'Connected';
+                document.getElementById('sol-status').className = 'status connected';
+                document.getElementById('sol-balance').textContent = `${balanceSol.toFixed(4)} SOL`;
+                document.getElementById('sol-address').textContent = `${solanaWallet.substring(0, 4)}...${solanaWallet.substring(40)}`;
+                document.getElementById('sol-current-network').textContent = currentSolanaNetwork.charAt(0).toUpperCase() + currentSolanaNetwork.slice(1);
+
+                document.getElementById('sol-network-section').style.display = 'block';
+
+                document.getElementById('sol-sign').disabled = false;
+                document.getElementById('sol-transfer').disabled = false;
+                document.getElementById('sol-connect').style.display = 'none';
+                document.getElementById('sol-disconnect').style.display = 'block';
+
+                log(`✅ Solana wallet connected!`, 'success');
+                log(`   Address: ${solanaWallet}`, 'info');
+                log(`   Balance: ${balanceSol.toFixed(4)} SOL`, 'info');
+
+            } catch (error) {
+                log(`❌ Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function switchSolanaNetwork() {
+            const network = document.getElementById('sol-network').value;
+            currentSolanaNetwork = network;
+
+            try {
+                log(`🔄 Switching to Solana ${network}...`, 'info');
+
+                solanaConnection = new solanaWeb3.Connection(
+                    solanaWeb3.clusterApiUrl(network),
+                    'confirmed'
+                );
+
+                const publicKey = new solanaWeb3.PublicKey(solanaWallet);
+                const balance = await solanaConnection.getBalance(publicKey);
+                const balanceSol = balance / solanaWeb3.LAMPORTS_PER_SOL;
+
+                document.getElementById('sol-balance').textContent = `${balanceSol.toFixed(4)} SOL`;
+                document.getElementById('sol-current-network').textContent = network.charAt(0).toUpperCase() + network.slice(1);
+                log(`✅ Switched to ${network}`, 'success');
+
+            } catch (error) {
+                log(`❌ Network switch failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function disconnectSolana() {
+            if (window.solana && window.solana.disconnect) {
+                await window.solana.disconnect();
+            }
+            solanaWallet = null;
+            solanaConnection = null;
+            document.getElementById('sol-status').textContent = 'Not Connected';
+            document.getElementById('sol-status').className = 'status disconnected';
+            document.getElementById('sol-balance').textContent = '--';
+            document.getElementById('sol-address').textContent = 'Not connected';
+            document.getElementById('sol-current-network').textContent = '--';
+            document.getElementById('sol-network-section').style.display = 'none';
+            document.getElementById('sol-sign').disabled = true;
+            document.getElementById('sol-transfer').disabled = true;
+            document.getElementById('sol-connect').style.display = 'block';
+            document.getElementById('sol-disconnect').style.display = 'none';
+            log('🔌 Solana wallet disconnected', 'info');
+        }
+
+        async function signEvmMessage() {
+            if (!evmAccount || !evmProvider) {
+                log('❌ Please connect wallet first', 'error');
+                return;
+            }
+
+            try {
+                const message = "Hello from OM1 Multi-Wallet! Bounty #358";
+                log(`📝 Requesting signature...`, 'info');
+
+                const signature = await evmProvider.request({
+                    method: 'personal_sign',
+                    params: [message, evmAccount],
+                });
+
+                log(`✅ Message signed successfully!`, 'success');
+                log(`   Signature: ${signature.substring(0, 20)}...`, 'success');
+
+            } catch (error) {
+                log(`❌ Signing failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function signSolMessage() {
+            if (!solanaWallet) {
+                log('❌ Please connect Phantom first', 'error');
+                return;
+            }
+
+            try {
+                const message = "Hello from OM1 Multi-Wallet! Bounty #358";
+                const encodedMessage = new TextEncoder().encode(message);
+
+                log(`📝 Requesting signature...`, 'info');
+
+                const signature = await window.solana.signMessage(encodedMessage, 'utf8');
+
+                log(`✅ Message signed successfully!`, 'success');
+                log(`   Signature: ${signature.signature.toString().substring(0, 20)}...`, 'success');
+
+            } catch (error) {
+                log(`❌ Signing failed: ${error.message}`, 'error');
+            }
+        }
+
+        function showTransferModal(wallet) {
+            currentWallet = wallet;
+
+            if (wallet === 'evm') {
+                const network = NETWORK_NAMES[evmChainId] || 'Unknown';
+                document.getElementById('transfer-title').textContent = 'Send Transaction';
+                document.getElementById('transfer-network-display').textContent = network;
+            } else if (wallet === 'solana') {
+                document.getElementById('transfer-title').textContent = 'Send SOL';
+                document.getElementById('transfer-network-display').textContent = currentSolanaNetwork.charAt(0).toUpperCase() + currentSolanaNetwork.slice(1);
+            }
+
+            document.getElementById('transferModal').classList.add('active');
+            log(`Opening transfer modal...`, 'info');
+        }
+
+        function closeModal() {
+            document.getElementById('transferModal').classList.remove('active');
+            document.getElementById('transferForm').reset();
+        }
+
+        async function submitTransfer(event) {
+            event.preventDefault();
+            const recipient = document.getElementById('recipient').value;
+            const amount = document.getElementById('amount').value;
+
+            if (currentWallet === 'evm') {
+                await sendEvmTransaction(recipient, amount);
+            } else if (currentWallet === 'solana') {
+                await sendSolTransaction(recipient, amount);
+            }
+
+            closeModal();
+        }
+
+        async function sendEvmTransaction(to, amount) {
+            if (!evmAccount || !evmProvider) {
+                log('❌ Please connect wallet first', 'error');
+                return;
+            }
+
+            try {
+                const network = NETWORK_NAMES[evmChainId] || 'Unknown';
+                log(`💸 Initiating transaction on ${network}...`, 'info');
+
+                const amountWei = '0x' + Math.floor(amount * 1e18).toString(16);
+
+                const txHash = await evmProvider.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        from: evmAccount,
+                        to: to,
+                        value: amountWei,
+                    }],
+                });
+
+                const explorerUrls = {
+                    '0x1': 'https://etherscan.io/tx/',
+                    '0xaa36a7': 'https://sepolia.etherscan.io/tx/',
+                    '0x89': 'https://polygonscan.com/tx/',
+                    '0x38': 'https://bscscan.com/tx/',
+                    '0xa4b1': 'https://arbiscan.io/tx/',
+                    '0xa': 'https://optimistic.etherscan.io/tx/',
+                };
+                const explorerUrl = (explorerUrls[evmChainId] || 'https://etherscan.io/tx/') + txHash;
+
+                log(`✅ Transaction sent!`, 'success');
+                log(`   TX Hash: ${txHash}`, 'success');
+                log(`   View: ${explorerUrl}`, 'info');
+
+                setTimeout(async () => {
+                    const balanceWei = await evmProvider.request({
+                        method: 'eth_getBalance',
+                        params: [evmAccount, 'latest']
+                    });
+                    const balanceEth = parseInt(balanceWei, 16) / 1e18;
+                    document.getElementById('evm-balance').textContent = `${balanceEth.toFixed(4)} ETH`;
+                }, 3000);
+
+            } catch (error) {
+                log(`❌ Transfer failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendSolTransaction(to, amount) {
+            if (!solanaWallet || !solanaConnection) {
+                log('❌ Please connect Phantom first', 'error');
+                return;
+            }
+
+            try {
+                log(`💸 Initiating Solana transfer...`, 'info');
+
+                const fromPubkey = new solanaWeb3.PublicKey(solanaWallet);
+                const toPubkey = new solanaWeb3.PublicKey(to);
+
+                const transaction = new solanaWeb3.Transaction().add(
+                    solanaWeb3.SystemProgram.transfer({
+                        fromPubkey: fromPubkey,
+                        toPubkey: toPubkey,
+                        lamports: amount * solanaWeb3.LAMPORTS_PER_SOL,
+                    })
+                );
+
+                transaction.feePayer = fromPubkey;
+                const { blockhash } = await solanaConnection.getRecentBlockhash();
+                transaction.recentBlockhash = blockhash;
+
+                log(`   Requesting signature...`, 'info');
+                const signed = await window.solana.signTransaction(transaction);
+
+                log(`   Sending transaction...`, 'info');
+                const signature = await solanaConnection.sendRawTransaction(signed.serialize());
+
+                log(`   Confirming...`, 'info');
+                await solanaConnection.confirmTransaction(signature, 'confirmed');
+
+                const explorerUrl = `https://explorer.solana.com/tx/${signature}?cluster=${currentSolanaNetwork}`;
+
+                log(`✅ Transaction confirmed!`, 'success');
+                log(`   TX: ${signature}`, 'success');
+                log(`   View: ${explorerUrl}`, 'info');
+
+                setTimeout(async () => {
+                    const balance = await solanaConnection.getBalance(fromPubkey);
+                    const balanceSol = balance / solanaWeb3.LAMPORTS_PER_SOL;
+                    document.getElementById('sol-balance').textContent = `${balanceSol.toFixed(4)} SOL`;
+                }, 3000);
+
+            } catch (error) {
+                log(`❌ Transfer failed: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

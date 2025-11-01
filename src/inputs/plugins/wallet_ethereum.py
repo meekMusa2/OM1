@@ -1,187 +1,249 @@
-import asyncio
 import logging
 import os
 import random
-import time
-from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Dict, Any
 
 from web3 import Web3
+from eth_account import Account
 
 from inputs.base import SensorConfig
-from inputs.base.loop import FuserInput
-from providers.io_provider import IOProvider
+from inputs.plugins.wallet_base import WalletBase
 
 
-@dataclass
-class Message:
+class WalletEthereum(WalletBase):
     """
-    Container for timestamped messages.
-
-    Parameters
-    ----------
-    timestamp : float
-        Unix timestamp of the message
-    message : str
-        Content of the message
-    """
-
-    timestamp: float
-    message: str
-
-
-class WalletEthereum(FuserInput[float]):
-    """
-    Ethereum wallet monitor that tracks ETH balance changes.
-
-    Queries the Ethereum blockchain for account balance updates and reports
-    incoming transactions.
-
-    Raises
-    ------
-    Exception
-        If connection to Ethereum network fails
+    Ethereum wallet monitor using Web3.
+    Tracks ETH balance changes and supports transactions.
     """
 
     def __init__(self, config: SensorConfig = SensorConfig()):
-        """
-        Initialize WalletEthereum instance.
-        """
         super().__init__(config)
-
-        # Track IO
-        self.io_provider = IOProvider()
-
-        self.ETH_balance = 0
-        self.ETH_balance_previous = 0
-        self.balance_eth = 0
-        self.balance_change = 0
-
-        self.messages: list[Message] = []
-        self.eth_info = ""
-
-        self.PROVIDER_URL = "https://eth.llamarpc.com"
-        self.POLL_INTERVAL = 4  # seconds between blockchain data updates
+        
+        # Ethereum-specific configuration
+        self.PROVIDER_URL = getattr(config, 'provider_url', "https://eth.llamarpc.com")
         self.ACCOUNT_ADDRESS = os.environ.get(
             "ETH_ADDRESS", "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
         )
+        
+        # Optional: Private key for signing transactions (read-only mode if not provided)
+        self.PRIVATE_KEY = os.environ.get("ETH_PRIVATE_KEY")
+        self.account = None
+        if self.PRIVATE_KEY:
+            self.account = Account.from_key(self.PRIVATE_KEY)
+            logging.info("WalletEthereum: Transaction signing enabled")
+        else:
+            logging.warning("WalletEthereum: Read-only mode (no ETH_PRIVATE_KEY)")
+        
+        # For debugging: simulate random incoming transfers
+        self.simulate_transfers = getattr(config, 'simulate_transfers', False)
+        
         logging.debug(f"Using {self.ACCOUNT_ADDRESS} as the wallet address")
-        logging.info("Testing: WalletEthereum: Initialized")
-
+        
         # Initialize Web3
         self.web3 = Web3(Web3.HTTPProvider(self.PROVIDER_URL))
         if not self.web3.is_connected():
-            raise Exception("Failed to connect to Ethereum")
+            raise Exception(f"Failed to connect to Ethereum at {self.PROVIDER_URL}")
+        
+        # Initialize balance
+        balance_wei = self.web3.eth.get_balance(self.ACCOUNT_ADDRESS)
+        self.balance = float(self.web3.from_wei(balance_wei, "ether"))
+        self.balance_previous = self.balance
+        
+        logging.info(f"WalletEthereum: Initialized with balance {self.balance} ETH")
 
-    async def _poll(self) -> List[float]:
+    async def fetch_balance(self, asset: str = "eth") -> float:
         """
-        Poll for Ethereum balance updates.
-
+        Fetch current ETH balance from Ethereum blockchain.
+        
+        Parameters
+        ----------
+        asset : str
+            Asset identifier (only 'eth' supported)
+            
         Returns
         -------
-        List[float]
-            [current_balance, balance_change]
+        float
+            Current balance in ETH
         """
-        await asyncio.sleep(self.POLL_INTERVAL)
-
         try:
-            # Get latest block data
+            # Get latest block for logging
             block_number = self.web3.eth.block_number
-
-            # Get account data
-            balance_wei = self.web3.eth.get_balance(self.ACCOUNT_ADDRESS)  # type: ignore
-            self.balance_eth = float(self.web3.from_wei(balance_wei, "ether"))
-
-            self.eth_info = {
-                "block_number": int(block_number),
-                "address": str(
-                    self.ACCOUNT_ADDRESS
-                ),  # that's a string prefixed with `0x`
-                "balance": self.balance_eth,
-            }
+            
+            # Get account balance
+            balance_wei = self.web3.eth.get_balance(self.ACCOUNT_ADDRESS)
+            balance_eth = float(self.web3.from_wei(balance_wei, "ether"))
+            
             logging.debug(
-                f"Block: {self.eth_info['block_number']}, Account Balance: {self.eth_info['balance']:.3f} ETH"
+                f"WalletEthereum: Block {block_number}, Balance {balance_eth:.5f} ETH"
             )
-
-            # randomly simulate ETH inbound transfers for debugging purposes
-            random_add_for_debugging = 0
-            dice = random.randint(0, 10)
-            logging.debug(f"WalletEthereum: dice {dice}")
-            if dice > 7:
-                logging.info("WalletEthereum: randomly adding 1.0 ETH")
-                random_add_for_debugging = 1.0
-
-            self.ETH_balance = self.balance_eth + random_add_for_debugging
-            self.balance_change = self.ETH_balance - self.ETH_balance_previous
-            self.ETH_balance_previous = self.ETH_balance
-
+            
+            # Debug mode: randomly simulate incoming transfers
+            if self.simulate_transfers:
+                dice = random.randint(0, 10)
+                if dice > 7:
+                    logging.info("WalletEthereum: Simulating +1.0 ETH transfer")
+                    balance_eth += 1.0
+            
+            return balance_eth
+            
         except Exception as e:
-            logging.error(f"Error fetching blockchain data: {e}")
+            logging.error(f"Error fetching Ethereum balance: {e}")
+            return self.balance
 
-        # use the old values if the try fails, otherwise use the new/updated values
-        return [self.ETH_balance, self.balance_change]
-
-    async def _raw_to_text(self, raw_input: List[float]) -> Optional[Message]:
+    def get_wallet_address(self) -> str:
         """
-        Convert balance data to human-readable message.
-
-        Parameters
-        ----------
-        raw_input : List[float]
-            [current_balance, balance_change]
-
+        Get the Ethereum wallet address.
+        
         Returns
         -------
-        Optional[Message]
-            Timestamped status or transaction notification
+        str
+            Ethereum address
         """
-        # balance = raw_input[0]
-        balance_change = raw_input[1]
+        return self.ACCOUNT_ADDRESS
 
-        if balance_change > 0:
-            message = f"You just received {balance_change:.3f} ETH."
-            logging.debug(f"WalletEthereum: {message}")
-            return Message(timestamp=time.time(), message=message)
-
-        return None
-
-    async def raw_to_text(self, raw_input: List[float]):
+    def get_supported_assets(self) -> List[str]:
         """
-        Process balance update and manage message buffer.
-
-        Parameters
-        ----------
-        raw_input : List[float]
-            Raw balance data
-        """
-        pending_message = await self._raw_to_text(raw_input)
-
-        if pending_message is not None:
-            self.messages.append(pending_message)
-
-    def formatted_latest_buffer(self) -> Optional[str]:
-        """
-        Format and clear the latest buffer contents.
-
+        Get list of supported assets.
+        
         Returns
         -------
-        Optional[str]
-            Formatted string of buffer contents or None if buffer is empty
+        List[str]
+            List of asset identifiers
         """
-        if len(self.messages) == 0:
-            return None
+        return ["eth"]
 
-        latest_message = self.messages[-1]
+    async def transfer(
+        self, 
+        to_address: str, 
+        amount: float, 
+        asset: str = "eth"
+    ) -> Dict[str, Any]:
+        """
+        Transfer ETH to another address.
+        
+        Parameters
+        ----------
+        to_address : str
+            Recipient Ethereum address
+        amount : float
+            Amount in ETH
+        asset : str
+            Asset to transfer (only 'eth' supported)
+            
+        Returns
+        -------
+        Dict[str, Any]
+            Transaction details
+        """
+        if not self.account:
+            logging.error("WalletEthereum: Cannot transfer - no private key configured")
+            return {
+                "transaction_hash": None,
+                "status": "failed",
+                "amount": amount,
+                "asset": asset,
+                "to_address": to_address,
+                "error": "No private key configured (read-only mode)"
+            }
+        
+        try:
+            logging.info(f"WalletEthereum: Initiating transfer of {amount} ETH to {to_address}")
+            
+            # Convert to checksum address
+            to_address_checksum = Web3.to_checksum_address(to_address)
+            
+            # Get transaction parameters
+            nonce = self.web3.eth.get_transaction_count(self.account.address)
+            gas_price = self.web3.eth.gas_price
+            
+            # Build transaction
+            transaction = {
+                'nonce': nonce,
+                'to': to_address_checksum,
+                'value': self.web3.to_wei(amount, 'ether'),
+                'gas': 21000,  # Standard ETH transfer
+                'gasPrice': gas_price,
+                'chainId': self.web3.eth.chain_id
+            }
+            
+            # Sign transaction
+            signed_txn = self.account.sign_transaction(transaction)
+            
+            # Send transaction
+            tx_hash = self.web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            
+            logging.info(f"WalletEthereum: Transaction sent: {tx_hash.hex()}")
+            
+            # Wait for receipt (optional, can be async)
+            # receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            
+            return {
+                "transaction_hash": tx_hash.hex(),
+                "status": "pending",
+                "amount": amount,
+                "asset": asset,
+                "to_address": to_address,
+                "from_address": self.account.address
+            }
+            
+        except Exception as e:
+            logging.error(f"WalletEthereum: Transfer failed: {e}")
+            return {
+                "transaction_hash": None,
+                "status": "failed",
+                "amount": amount,
+                "asset": asset,
+                "to_address": to_address,
+                "error": str(e)
+            }
 
-        result = f"""
-{self.__class__.__name__} INPUT
-// START
-{latest_message.message}
-// END
-"""
-
-        self.io_provider.add_input(
-            self.__class__.__name__, latest_message.message, latest_message.timestamp
-        )
-        self.messages = []
-        return result
+    async def sign_message(self, message: str) -> Dict[str, Any]:
+        """
+        Sign a message with the Ethereum wallet (EIP-191).
+        
+        Parameters
+        ----------
+        message : str
+            Message to sign
+            
+        Returns
+        -------
+        Dict[str, Any]
+            Signature details
+        """
+        if not self.account:
+            logging.error("WalletEthereum: Cannot sign - no private key configured")
+            return {
+                "signature": None,
+                "message": message,
+                "address": self.ACCOUNT_ADDRESS,
+                "status": "failed",
+                "error": "No private key configured (read-only mode)"
+            }
+        
+        try:
+            logging.info(f"WalletEthereum: Signing message: {message}")
+            
+            # Sign message using eth_account
+            signed_message = self.account.sign_message(
+                Account.messages.encode_defunct(text=message)
+            )
+            
+            logging.info(f"WalletEthereum: Message signed successfully")
+            
+            return {
+                "signature": signed_message.signature.hex(),
+                "message": message,
+                "address": self.account.address,
+                "status": "success"
+            }
+            
+        except Exception as e:
+            logging.error(f"WalletEthereum: Signing failed: {e}")
+            return {
+                "signature": None,
+                "message": message,
+                "address": self.ACCOUNT_ADDRESS,
+                "status": "failed",
+                "error": str(e)
+            }

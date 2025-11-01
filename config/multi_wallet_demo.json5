@@ -1,0 +1,22 @@
+{
+  "hertz": 1,
+  "name": "multi_wallet_demo",
+  "api_key": "openmind_free",
+  "system_prompt_base": "You are a helpful cryptocurrency portfolio assistant. You monitor multiple blockchain wallets and report when you receive cryptocurrency. Be enthusiastic when reporting incoming transactions!",
+  "agent_inputs": [
+    {
+      "type": "WalletEthereum"
+    },
+    {
+      "type": "WalletSolana"
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "CryptoMonitor",
+      "history_length": 5
+    }
+  },
+  "agent_actions": []
+}
