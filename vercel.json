@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "om1-multi-wallet-demo",
+  "builds": [
+    {
+      "src": "demo_wallet_ui_production.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/demo_wallet_ui_production.html"
+    }
+  ]
+}
