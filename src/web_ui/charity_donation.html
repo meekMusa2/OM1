@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OM1 API Credit Gift Program</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 32px; }
+        .subtitle { color: #666; margin-bottom: 10px; }
+        .testnet-badge {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-block;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .wallet-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover { background: #059669; }
+        .charity-card {
+            border: 2px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .charity-card:hover {
+            border-color: #667eea;
+            background: #f9fafb;
+        }
+        .charity-card.selected {
+            border-color: #667eea;
+            background: #eef2ff;
+        }
+        .amount-input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+        .status-success { background: #d1fae5; color: #065f46; }
+        .status-error { background: #fee2e2; color: #991b1b; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .hidden { display: none; }
+        .transaction-hash {
+            word-break: break-all;
+            font-family: monospace;
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        .transaction-hash a { color: #667eea; text-decoration: none; }
+        .transaction-hash a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎁 API Credit Gift Program</h1>
+        <p class="subtitle">Gift API credits to developers via OM1</p>
+        <div class="testnet-badge">🧪 Sepolia Testnet - Free Test Mode</div>
+        
+        <div class="wallet-section">
+            <button id="connectBtn" class="btn btn-primary">
+                🦊 Connect MetaMask Wallet
+            </button>
+            <div id="walletInfo" class="hidden">
+                <p><strong>Connected:</strong> <span id="walletAddress"></span></p>
+                <p><strong>Balance:</strong> <span id="walletBalance"></span> ETH</p>
+                <p><strong>Network:</strong> <span id="networkName">Checking...</span></p>
+            </div>
+        </div>
+        
+        <div id="charitySection" class="hidden">
+            <h2>Select Program</h2>
+            <div id="charities"></div>
+            
+            <h2 style="margin-top: 30px;">Gift Amount</h2>
+            <input type="number" id="amount" class="amount-input" placeholder="Enter amount in USD" value="10" min="1" step="1">
+            
+            <button id="donateBtn" class="btn btn-success">
+                🎁 Gift API Credits
+            </button>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const CHARITY_WALLET = '0xAb166A6d162Cb2D240bFba55fE9E864FEeC46935';
+        const ETH_PRICE = 2500;
+        const OM1_WEBHOOK_URL = 'http://localhost:5001/donation_complete';
+        const SEPOLIA_CHAIN_ID = '0xaa36a7';
+        
+        const charities = [
+            {
+                id: 'credit_gift',
+                name: 'OpenMind API Credit Gift Program',
+                description: 'Gift API credits to developers who exhausted their free tier',
+                impact: '$10 = 10,000 API credits for 1 developer'
+            },
+            {
+                id: 'student_credits',
+                name: 'Student Developer Credit Fund',
+                description: 'Provide free API access to students learning AI and robotics',
+                impact: '$25 = 6 months free API access for 1 student'
+            }
+        ];
+        
+        let selectedCharity = charities[0];
+        
+        function checkURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            const amount = params.get('amount');
+            const charity = params.get('charity');
+            
+            if (amount) document.getElementById('amount').value = amount;
+            if (charity) {
+                const idx = charities.findIndex(c => c.id === charity);
+                if (idx !== -1) selectedCharity = charities[idx];
+            }
+        }
+        
+        function displayCharities() {
+            document.getElementById('charities').innerHTML = charities.map((c, i) => `
+                <div class="charity-card ${c.id === selectedCharity.id ? 'selected' : ''}" onclick="selectCharity(${i})">
+                    <h3>🎁 ${c.name}</h3>
+                    <p>${c.description}</p>
+                    <p><strong>Impact:</strong> ${c.impact}</p>
+                </div>
+            `).join('');
+        }
+        
+        function selectCharity(index) {
+            selectedCharity = charities[index];
+            document.querySelectorAll('.charity-card').forEach((card, i) => {
+                card.classList.toggle('selected', i === index);
+            });
+        }
+        
+        async function checkNetwork() {
+            try {
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== SEPOLIA_CHAIN_ID) {
+                    showStatus('error', `⚠️ Please switch to Sepolia testnet in MetaMask`);
+                    document.getElementById('networkName').textContent = 'Wrong Network ⚠️';
+                    return false;
+                }
+                document.getElementById('networkName').textContent = 'Sepolia Testnet ✅';
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('error', '❌ MetaMask not installed! Install from metamask.io');
+                    return;
+                }
+                
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const userAddress = accounts[0];
+                
+                const balanceHex = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [userAddress, 'latest']
+                });
+                
+                const balanceEth = parseInt(balanceHex, 16) / 1e18;
+                
+                document.getElementById('walletAddress').textContent = 
+                    userAddress.substring(0, 6) + '...' + userAddress.substring(38);
+                document.getElementById('walletBalance').textContent = balanceEth.toFixed(4);
+                
+                document.getElementById('connectBtn').classList.add('hidden');
+                document.getElementById('walletInfo').classList.remove('hidden');
+                document.getElementById('charitySection').classList.remove('hidden');
+                
+                displayCharities();
+                
+                if (await checkNetwork()) {
+                    showStatus('success', '✅ Wallet connected on Sepolia testnet!');
+                    if (balanceEth < 0.001) {
+                        showStatus('error', '⚠️ Low balance! Get free ETH from https://sepoliafaucet.com');
+                    }
+                }
+            } catch (error) {
+                showStatus('error', '❌ Failed to connect: ' + error.message);
+            }
+        });
+        
+        document.getElementById('donateBtn').addEventListener('click', async () => {
+            try {
+                if (!await checkNetwork()) {
+                    showStatus('error', '❌ Switch to Sepolia testnet first!');
+                    return;
+                }
+                
+                const amountUSD = parseFloat(document.getElementById('amount').value);
+                if (!amountUSD || amountUSD <= 0) {
+                    showStatus('error', 'Please enter valid amount');
+                    return;
+                }
+                
+                const amountETH = amountUSD / ETH_PRICE;
+                const amountHex = '0x' + Math.floor(amountETH * 1e18).toString(16);
+                
+                showStatus('pending', `⏳ Preparing $${amountUSD} gift to ${selectedCharity.name}...<br><em>Approve in MetaMask</em>`);
+                
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        from: accounts[0],
+                        to: CHARITY_WALLET,
+                        value: amountHex,
+                    }],
+                });
+                
+                showStatus('success', `
+                    ✅ Gift successful! Thank you! 🎁<br>
+                    <strong>Amount:</strong> $${amountUSD} USD<br>
+                    <strong>Program:</strong> ${selectedCharity.name}<br>
+                    <strong>Impact:</strong> ${selectedCharity.impact}<br>
+                    <div class="transaction-hash">
+                        TX: ${txHash}<br>
+                        <a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">View on Etherscan</a>
+                    </div>
+                    <br><em>⏳ Notifying OM1...</em>
+                `);
+                
+                await notifyOM1(txHash, amountUSD, amountETH, selectedCharity);
+                
+            } catch (error) {
+                showStatus('error', '❌ Transaction failed: ' + error.message);
+            }
+        });
+        
+        async function notifyOM1(txHash, amountUSD, amountETH, charity) {
+            try {
+                const response = await fetch(OM1_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tx_hash: txHash,
+                        amount: amountUSD,
+                        amount_eth: amountETH,
+                        charity: charity.name,
+                        charity_id: charity.id,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('status').innerHTML = document.getElementById('status').innerHTML.replace(
+                        '⏳ Notifying OM1...',
+                        '✅ <strong>OM1 notified!</strong><br>Voice confirmation will be announced.'
+                    );
+                }
+            } catch (error) {
+                console.error('Failed to notify OM1:', error);
+            }
+        }
+        
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status status-${type}`;
+            statusDiv.innerHTML = message;
+            statusDiv.classList.remove('hidden');
+        }
+        
+        checkURLParams();
+    </script>
+</body>
+</html>

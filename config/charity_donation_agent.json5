@@ -1,0 +1,34 @@
+{
+  "hertz": 0.5,
+  "name": "charity_donation_agent",
+  "api_key": "openmind_free",
+  "system_prompt_base": "You are a compassionate charity donation assistant. You help users discover meaningful causes and make cryptocurrency donations to verified charities. You can show available charities, explain their impact, and guide users through crypto donations. Be warm, inspiring, and emphasize the positive impact of their contributions.",
+  "system_governance": "Never process donations without explicit user confirmation. Always show charity details and impact before donation.",
+  "system_prompt_examples": "Examples:\n1. User: 'Show me charities' → CharityDonation: {{'action': 'browse_charities'}}\n2. User: 'Donate to clean water' → CharityDonation: {{'action': 'donate', 'charity_name': 'water', 'amount_usd': 10}}\n3. User: 'Check my donation' → CharityDonation: {{'action': 'check_donation', 'donation_id': 'DON-12345'}}",
+  "agent_inputs": [
+    {
+      "type": "MockInput"
+    }
+  ],
+  "cortex_llm": {
+    "type": "OpenAILLM",
+    "config": {
+      "agent_name": "Charity Assistant",
+      "history_length": 10
+    }
+  },
+  "agent_actions": [
+    {
+      "name": "speak",
+      "llm_label": "Speak",
+      "implementation": "passthrough",
+      "connector": "elevenlabs_tts"
+    },
+    {
+      "name": "charity_donation",
+      "llm_label": "CharityDonation",
+      "implementation": "passthrough",
+      "connector": "giving_block"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+# Add to Home Assistant configuration.yaml
+
+automation:
+  - id: om1_charity_donation_voice
+    alias: "OM1: Voice Charity Donation"
+    trigger:
+      - platform: event
+        event_type: google_assistant_command
+        event_data:
+          command: "donate"
+    action:
+      # Parse amount from voice
+      - service: script.om1_charity_donation
+        data:
+          amount: "{{ trigger.event.data.amount | default(10) }}"
+          charity: "{{ trigger.event.data.charity | default('demo') }}"
+
+script:
+  om1_charity_donation:
+    alias: "OM1 Charity Donation Flow"
+    sequence:
+      # 1. Announce to user
+      - service: tts.google_say
+        data:
+          message: "Opening donation page for {{ charity }}. Amount: ${{ amount }}"
+      
+      # 2. Call OM1 Python script
+      - service: shell_command.om1_donate
+        data:
+          amount: "{{ amount }}"
+          charity: "{{ charity }}"
+      
+      # 3. Wait for confirmation webhook
+      - wait_for_trigger:
+          - platform: webhook
+            webhook_id: om1_donation_complete
+        timeout: 300  # 5 minutes
+      
+      # 4. Announce completion
+      - service: tts.google_say
+        data:
+          message: "Donation confirmed! Thank you for donating ${{ amount }} to {{ charity }}. Transaction hash {{ wait.trigger.data.tx_hash }}"
+
+shell_command:
+  om1_donate: "python3 /path/to/OM1/trigger_donation.py {{ amount }} {{ charity }}"
